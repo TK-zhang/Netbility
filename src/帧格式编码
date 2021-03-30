@@ -1,0 +1,272 @@
+/*  2021/3/20更新
+	代码作用为加工bin数据 使之直接能生成带定位点的异形二维码
+	黑为1 白为0
+	定位点为左上右上右下三个位置
+	定位点数据为10111010  右定位点数据为01011101
+	定位点的列 只有0-6和 57-63  都是7列
+	分辨率为64*64
+	结束标志为16*8个连续的0
+	20 21行 文件名称及路径需要根据实际文件自行修改
+	不具有文件压缩功能
+
+
+	更新日志
+		2021/3/20	修改了文件 之前没考虑到二维码定位点按行解析的时候没考虑17和26的特殊情况
+		2021/3/21   修改了定位点与数据点之间不存在间隔的bug  
+		2021/3/22   更新到了192*108 
+		2021/3/25   将原数字用宏替代，便于后期修改
+*/
+
+
+//行数
+#define I_ROWS 108
+//列数
+#define I_COLS 192
+//行首 x=0的位置
+#define BEGINOFLINE 0
+//表首行 y=0的位置
+#define BEGINOFSHEET 0
+
+//I_COLS*108部分
+
+#include <iostream>
+#include <fstream>
+using namespace std;
+int k = 0,j=0;
+int page = 0;
+int main()
+{
+	ifstream infile("C:\\Users\\omen\\Desktop\\1.bin", ios::in | ios::binary);
+	ofstream outfile("C:\\Users\\omen\\Desktop\\12.bin", ios::out | ios::binary);
+
+	char c;
+	char left = 186, right = 93;	//定位点345行左右部分
+	char Leftline1And7 = 254, leftLine2And6 = 130;		//左定位点1、7行和2、6行
+	char rightLine1And7 = 127, rightLine2And6 = 65;		//右定位点1、7行和2、6行
+	char ZERO = 0;
+	int x = 0; int y = 0;
+	//当数据没输入完时
+	while (1)
+	{
+		if ((y == 2 || y == 3 || y == 4 || y == I_ROWS - 3 || y == I_ROWS - 4 || y == I_ROWS - 5) && x == 0)
+		{
+			outfile << left;
+			x = x + 8;
+		}
+		else if ((y == 2 || y == 3 || y == 4 || y == I_ROWS - 3 || y == I_ROWS - 4 || y == I_ROWS - 5) && x == I_COLS - 8)
+		{
+			outfile << right;
+			x = x + 8;
+		}
+		else if ((y == 0 || y == 6||y==I_ROWS-1||y==I_ROWS-7) && x == 0)
+		{
+			outfile << Leftline1And7;
+			x = x + 8;
+		}
+		else if ((y == 1 || y == 5||y==I_ROWS-2||y==I_ROWS-6) && x == 0)
+		{
+			outfile << leftLine2And6;
+			x = x + 8;
+		}
+		else if ((y == 0 || y == 6 || y == I_ROWS - 7 || y == I_ROWS - 1) && x == I_COLS - 8)
+		{
+			outfile << rightLine1And7;
+			x = x + 8;
+		}
+		else if ((y == 1 || y == 5 || y == I_ROWS - 6 || y == I_ROWS - 2) && x == I_COLS - 8)
+		{
+			outfile << rightLine2And6;
+			x = x + 8;
+		}
+		else if ((x == 0 && y == 7) || (x == I_COLS - 8 && y == 7) || (x == I_COLS - 8 && y == I_ROWS - 8)||(x==0&&y== I_ROWS - 8))
+		{
+			outfile << ZERO;
+			x = x + 8;
+		}
+		else
+		{
+			infile >> std::noskipws >> c;
+			if (infile.eof())	break;
+			else
+			{
+				outfile << c;
+				x = x + 8;
+			}
+		}
+		if (x == I_COLS)
+		{
+			x = 0;
+			y++;
+		}
+		if (y == I_ROWS) {
+			y = 0;	page++;
+		}
+	}
+	//输入完毕 打入结束标志 以连续16*8个0作为结束标志
+	//y==I_ROWS - 1  x==56 为本页二维码刚好能输出所有结束标志的位置
+		//如果能输出完
+	if (y < I_ROWS - 1 || (y == I_ROWS - 1 && x <= 56))
+	{
+		
+		while (1)
+		{
+			if ((y == 2 || y == 3 || y == 4 || y == I_ROWS - 3 || y == I_ROWS - 4 || y == I_ROWS - 5) && x == 0)
+			{
+				outfile << left;
+				x = x + 8;
+				
+			}
+			else if ((y == 2 && x == I_COLS - 8) || (y == 3 && x == I_COLS - 8) || (y == 4 && x == I_COLS - 8) || (y == I_ROWS - 5 && x == I_COLS - 8)\
+				|| (y == I_ROWS - 4 && x == I_COLS - 8) || (y == I_ROWS - 3 && x == I_COLS - 8))
+			{
+				outfile << right;
+				x = x + 8;
+			}
+			else if ((y == 0 || y == 6 || y == I_ROWS - 1 || y == I_ROWS - 7) && x == 0)
+			{
+				outfile << Leftline1And7;
+				x = x + 8;
+			}
+			else if ((y == 1 || y == 5 || y == I_ROWS - 2 || y == I_ROWS - 6) && x == 0)
+			{
+				outfile << leftLine2And6;
+				x = x + 8;
+			}
+			else if ((y == 0 || y == 6 || y == I_ROWS - 7 || y == I_ROWS - 1) && x == I_COLS - 8)
+			{
+				outfile << rightLine1And7;
+				x = x + 8;
+			}
+			else if ((y == 1 || y == 5 || y == I_ROWS - 6 || y == I_ROWS - 2) && x ==I_COLS - 8)
+			{
+				outfile << rightLine2And6;
+				x = x + 8;
+			}
+			else if ((x == 0 && y == 7) || (x == I_COLS - 8 && y == 7) || (x == I_COLS - 8 && y == I_ROWS - 8) || (x == 0 && y == I_ROWS - 8))
+			{
+				outfile << ZERO;
+				x = x + 8;
+			}
+			else
+			{
+				outfile << ZERO;
+				x = x + 8;
+			}
+			if (x == I_COLS)
+			{
+				x = 0;
+				y++;
+			}
+			if (y == I_ROWS)	break;	
+		}
+	}
+	//如果不能输出完
+	else
+	{	//输出第一残余页内容
+		while (1)
+		{
+			if ((y == 2 || y == 3 || y == 4 || y == I_ROWS - 3 || y == I_ROWS - 4 || y == I_ROWS - 5) && x == 0)
+			{
+				outfile << left;
+				x = x + 8;
+			}
+			else if ((y == 2 && x == I_COLS - 8) || (y == 3 && x == I_COLS - 8) || (y == 4 && x == I_COLS - 8) || (y == I_ROWS - 5 && x == I_COLS - 8)\
+				|| (y == I_ROWS - 4 && x == I_COLS - 8) || (y == I_ROWS - 3 && x == I_COLS - 8))
+			{
+				outfile << right;
+				x = x + 8;
+			}
+			else if ((y == 0 || y == 6 || y == I_ROWS - 1 || y == I_ROWS - 7) && x == 0)
+			{
+				outfile << Leftline1And7;
+				x = x + 8;
+			}
+			else if ((y == 1 || y == 5 || y == I_ROWS - 2 || y == I_ROWS - 6) && x == 0)
+			{
+				outfile << leftLine2And6;
+				x = x + 8;
+			}
+			else if ((y == 0 || y == 6 || y == I_ROWS - 7 || y == I_ROWS - 1) && x == I_COLS - 8)
+			{
+				outfile << rightLine1And7;
+				x = x + 8;
+			}
+			else if ((y == 1 || y == 5 || y == I_ROWS - 6 || y == I_ROWS - 2) && x == I_COLS - 8)
+			{
+				outfile << rightLine2And6;
+				x = x + 8;
+			}
+			else if ((x == 0 && y == 7) || (x == I_COLS - 8 && y == 7) || (x == I_COLS - 8 && y == I_ROWS - 8) || (x == 0 && y == I_ROWS - 8))
+			{
+				outfile << ZERO;
+				x = x + 8;
+			}
+			else
+			{
+				outfile << ZERO;
+				x = x + 8;
+			}
+			if (x == I_COLS)
+			{
+				x = 0;
+				y++;
+			}
+			if (y == I_ROWS)	break;
+			
+		}
+		//输出第二页内容
+		while (1)
+		{
+			if ((y == 2 || y == 3 || y == 4 || y == I_ROWS - 3 || y == I_ROWS - 4 || y == I_ROWS - 5) && x == 0)
+			{
+				outfile << left;
+				x = x + 8;
+			}
+			else if ((y == 2 && x == I_COLS - 8) || (y == 3 && x == I_COLS - 8) || (y == 4 && x == I_COLS - 8) || (y == I_ROWS - 5 && x == I_COLS - 8)\
+				|| (y == I_ROWS - 4 && x == I_COLS - 8) || (y == I_ROWS - 3 && x == I_COLS - 8))
+			{
+				outfile << right;
+				x = x + 8;
+			}
+			else if ((y == 0 || y == 6 || y == I_ROWS - 1 || y == I_ROWS - 7) && x == 0)
+			{
+				outfile << Leftline1And7;
+				x = x + 8;
+			}
+			else if ((y == 1 || y == 5 || y == I_ROWS - 2 || y == I_ROWS - 6) && x == 0)
+			{
+				outfile << leftLine2And6;
+				x = x + 8;
+			}
+			else if ((y == 0 || y == 6 || y == I_ROWS - 7 || y == I_ROWS - 1) && x == I_COLS - 8)
+			{
+				outfile << rightLine1And7;
+				x = x + 8;
+			}
+			else if ((y == 1 || y == 5 || y == I_ROWS - 6 || y == I_ROWS - 2) && x == I_COLS - 8)
+			{
+				outfile << rightLine2And6;
+				x = x + 8;
+			}
+			else if ((x == 0 && y == 7) || (x == I_COLS - 8 && y == 7) || (x == I_COLS - 8 && y == I_ROWS - 8) || (x == 0 && y == I_ROWS - 8))
+			{
+				outfile << ZERO;
+				x = x + 8;
+			}
+			else
+			{
+				outfile << ZERO;
+				x = x + 8;
+			}
+			if (x == I_COLS)
+			{
+				x = 0;
+				y++;
+			}
+			if (y == I_ROWS)	break;
+			
+		}
+	}
+	cout << "编码完成！   "<<k <<"   "<<j<< endl;
+
+}
